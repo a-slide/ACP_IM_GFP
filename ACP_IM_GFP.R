@@ -6,44 +6,92 @@ library(RColorBrewer)
 library(gplots)
 x11()
 
+########################################################################################################################
+#   3 arguments are required
+#       1 = filename containing the data
+#       2 = Filtering NA contining genes for global data (TRUE) or group data (FALSE)
+#       3 = Max Percent of NA allowed in data
+########################################################################################################################
+
 # Inport data in a dataframe
-file = commandArgs(TRUE)[1]
-data = read.table(file, dec=".", sep="\t", header = TRUE, row.names=1)
+filename = commandArgs(TRUE)[1]
+data = read.table(filename, dec=".", sep="\t", header = TRUE, row.names=1)
 
-# Find and remove variables whith NA values
-NA.mat = is.na(data)                        # Create a logical matrix T/F indicating if a value is NA
-NA.col= apply(NA.mat, MARGIN=2, FUN = any)  # Check if any value in the column is NA
-NA.index = which(NA.col)                    # Return the position of columns whith at least one NA
-data = data[,-NA.index]                     # Remove NA containing columns from data
+# Parse the second parameter to set up global_NA_filtering variable
+global_NA_filtering = as.logical(commandArgs(TRUE)[2])
 
-print (paste(length(NA.index), "genes had been removed due to NA values"))
-write(names(NA.col[NA.col==TRUE]), "Eliminated_genes.txt")
+# if TRUE NA filtering is done on the global dataset
+ if (global_NA_filtering == TRUE){
+    
+    # Calculate the maximal number of NA allowed
+    NA_max_percent = as.numeric(commandArgs(TRUE)[3])
+    NA_max = round ((NA_max_percent*nrow(data)/100), digits=0)
+    
+    print ("GLOBAL DATA FILTERING")
+    print (paste("MAX NA ALLOWED = " , NA_max))
+    
+    # List genes with more NA value than max NA and export to file
+    eliminated_genes = names(data[,colSums(is.na(data)) > NA_max])
+    write(eliminated_genes, "Eliminated_genes.txt")
+    print (paste(length(eliminated_genes), " GENES HAVE BEEN FILTERED OUT"))
+    
+    # List genes with less NA value than max NA and export to file
+    retained_genes = names(data[,colSums(is.na(data)) <= NA_max])
+    write(retained_genes, "Retained_genes.txt")
+    
+    # Remove columns with more NA than max_N and replacing the remaining values by 0
+    data = data[,colSums(is.na(data)) <= NA_max]
+    data[is.na(data)] = 0
+}
 
 # Create a list of row number to analyze data separatly
 groups = c("J7", "J30", "J90", "Euthanasia", "Wilson", "Sheperd", "Monk", "Walcott","Ruben","Woody")
 
-l = list(   c(1,9,17,25,33,41),     # Line range for J7
-            c(2,10,18,26,34,42),    # Line range for J30
-            c(3,11,19,27,35),       # Line range for J90
-            c(4,12,20,28,36,43),    # Line range for eutha
-            1:8,        # Line range for Wil
-            9:16,       # Line range for Shep
-            17:24,      # Line range for Monk
-            25:32,      # Line range for Walc
-            33:40,      # Line range for Rub
-            41:46)      # Line range for Woo
+l = list(   1:6,                          # Line range for J7
+            13:18,                        # Line range for J30
+            25:29,                        # Line range for J90
+            35:40,                        # Line range for eutha
+            c(1,7,13,19,25,30,35,41),     # Line range for Wil
+            c(2,8,14,20,26,31,36,42),     # Line range for Shep
+            c(3,9,15,21,27,32,37,43),     # Line range for Monk
+            c(4,10,16,22,28,33,38,44),    # Line range for Walc
+            c(5,11,17,23,29,34,39,45),    # Line range for Rub
+            c(6,12,18,24,40,46))          # Line range for Woo
 
 names(l) = groups
 
 #Loop foreach element in l
 
 for (i in seq_along(l)){
-
+    
     #Extract informations for the current group
     group.name = groups[i]
     group.index = l[[i]]
     group.data = data[group.index,]
 
+    # if FALSE NA filtering is done on the independant group dataset
+     if (global_NA_filtering == FALSE){
+         
+        # Calculate the maximal number of NA allowed
+        NA_max_percent = as.numeric(commandArgs(TRUE)[3])
+        NA_max = round ((NA_max_percent*nrow(group.data)/100), digits=0)
+     
+        print (paste ("DATA FILTERING FOR GROUP", group.name))
+        print (paste("MAX NA ALLOWED BY GROUP = " , NA_max))
+        
+        # List genes with more NA value than max NA and export to file
+        eliminated_genes = names(group.data[,colSums(is.na(group.data)) > NA_max])
+        write(eliminated_genes, paste("Eliminated_genes_", group.name,".txt", collapse=""))
+        
+        # List genes with less NA value than max NA and export to file
+        retained_genes = names(group.data[,colSums(is.na(group.data)) <= NA_max])
+        write(retained_genes, paste("Retained_genes_", group.name,".txt", collapse=""))
+        
+        # Remove columns with more NA than max_N and replacing the remaining values by 0
+        group.data = group.data[,colSums(is.na(group.data)) <= NA_max]
+        group.data[is.na(group.data)] = 0
+    }
+    
     print (paste("ANALYSING GROUP ", group.name))
     print (row.names(group.data))
 
@@ -60,7 +108,7 @@ for (i in seq_along(l)){
     # Create summary of highly corelated variables with dim1, dim2, dim3 and export to CSV files
 
     Dim = dimdesc(PCA.res, axes = c(1, 2, 3))
-
+    
     output = rbind (
         c("Dim1.Correlation", "Dim1.p-Value"), Dim$Dim.1$quanti,
         c("Dim2.Correlation", "Dim2.p-Value"), Dim$Dim.2$quanti,
@@ -70,7 +118,8 @@ for (i in seq_along(l)){
 
 
     ## Row clustering (adjust here distance/linkage methods to what you need!)
-    hr <- hclust(as.dist(1-cor(group.data, method="pearson")), method="complete")
+    dist_mat = as.dist(1-cor(group.data, method="pearson"))
+    hr <- hclust(dist_mat, method="complete")
     group.data = t(group.data)
 
     ## Plot heatmap
