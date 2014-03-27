@@ -17,7 +17,7 @@ filename = commandArgs(TRUE)[1]
 data = read.table(filename, dec=".", sep="\t", header = TRUE, row.names=1)
 
 # Create a list of group names to analyze data separatly
-groups = c("J7", "J30", "J90", "Eutha", "Wilson", "Sheperd", "Monk", "Walcott","Ruben","Woody")
+groups = c("J7")
 
 eliminated_genes = list()
 retained_genes = list()
