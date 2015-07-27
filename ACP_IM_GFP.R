@@ -7,7 +7,8 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length (args) != 2)
     stop("2 arguments are required:
     Filename of csv file containing the data
-    Max percentage of values with NA allows per column")
+    Max percentage of values with NA allows per column
+    Example : ACP_IM_GFP.R ./data/Sample.csv 50")
 
 ### LOAD PACKAGES ###
 
