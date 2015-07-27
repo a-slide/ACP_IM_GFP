@@ -1,109 +1,120 @@
 #! /usr/bin/Rscript
 
+### VERIFY THE NUMBER OF ARG ###
+
+args <- commandArgs(trailingOnly = TRUE)
+
+if (length (args) != 2)
+    stop("2 arguments are required:
+    Filename of csv file containing the data
+    Max percentage of values with NA allows per column")
+
+### LOAD PACKAGES ###
+
 options(width = 160) # wider terminal size
 library(FactoMineR)
 library(RColorBrewer)
 library(gplots)
 x11()
 
-########################################################################################################################
-#   2 arguments are required
-#       1 = filename containing the data
-#       2 = Max Percent of NA allowed in data
-########################################################################################################################
+### IMPORT DATA ###
 
 # Inport data in a dataframe
-filename = commandArgs(TRUE)[1]
-data = read.table(filename, dec=".", sep="\t", header = TRUE, row.names=1)
+filename = args[1]
+sample_data = read.table(filename, dec=".", sep="\t", header = TRUE, row.names=1)
 
-# Create a list of group names to analyze data separatly
-groups = c("J7")
+# Extract basename of the filename
+sample_name = sub("^([^.]*).*", "\\1", basename(filename))
+print (paste("ANALYSING SAMPLE  ", sample_name))
 
-eliminated_genes = list()
-retained_genes = list()
+# Calculate the maximal number of NA allowed
+NA_max_percent = as.numeric(args[2])
+NA_max = round ((NA_max_percent*nrow(sample_data)/100), digits=0)
+print (paste("MAX NA ALLOWED BY GROUP = " , NA_max))
 
-write ("RETAINED GENES", file = "Retained_genes.txt")
-write ("ELIMINATED GENES", file = "Eliminated_genes.txt")
+### PREPROCESS DATA ###
 
-for (group in groups){
-    
-    print (paste("ANALYSING GROUP ", group))
-    
-    #Extract informations for the current group
-    group.data = data[grep(group, rownames(data), ignore.case = TRUE),]
+# Open a file for writing a report of eliminated and retained mir
+report_name = paste("Report_", sample_name,".csv", collapse="")
 
-    print ("INDIVIDUAL ANALYSED")
-    print (rownames(group.data))
-    
-    # Calculate the maximal number of NA allowed
-    NA_max_percent = as.numeric(commandArgs(TRUE)[2])
-    NA_max = round ((NA_max_percent*nrow(group.data)/100), digits=0)
- 
-    print (paste("MAX NA ALLOWED BY GROUP = " , NA_max))
-    
-    # List genes with more NA value than max NA and export to file
-    eliminated = paste(names(group.data[,colSums(is.na(group.data)) > NA_max]), collapse = " ")
-    eliminated_genes = c(eliminated_genes, group, eliminated)
-    
-    # List genes with less NA value than max NA and export to file
-    retained = paste((names(group.data[,colSums(is.na(group.data)) <= NA_max])), collapse = " ") 
-    retained_genes = c(retained_genes, group, retained)
-    
-    # Remove columns with more NA than max_N and replacing the remaining values by 0
-    group.data = group.data[,colSums(is.na(group.data)) <= NA_max]
-    group.data[is.na(group.data)] = 0
-    
-    print ("VARIABLE ANALYSED ")
-    print(colnames(group.data))
-    
-    # Perform ACP with FactoMineR pakage
-    PCA.res = PCA(
-        group.data,
-        scale.unit=TRUE,
-        graph = FALSE)
+# List genes with less NA value than max NA and export to file
+write ("ELIMINATED GENES", report_name)
+slice = paste((names(sample_data[,colSums(is.na(sample_data)) > NA_max])), collapse = "\t")
+write (slice, report_name, append=T)
 
-    # Create and export plots for all ACP results
-    plot(PCA.res, axes = c(1, 2), choix = "ind", title = group)
-    dev.print(file = paste("ACP_individus_", group,".svg", collapse=""), device=svg)
+# Remove column with more NA that the maximum allowed
+sample_data = sample_data[,colSums(is.na(sample_data)) <= NA_max]
 
-    plot(PCA.res, axes = c(1, 2), choix = "var", title = group, cex = 0.5)
-    dev.print(file = paste("ACP_variables_", group,".svg", collapse=""), device=svg)
+# List retained genes with NA
+write ("RETAINED GENES WITH NA", report_name, append=T)
+slice = paste((names(sample_data[,colSums(is.na(sample_data)) > 0] )), collapse = "\t")
+write (slice, report_name, append=T)
 
-    # Create summary of highly corelated variables with dim1, dim2 and export to CSV files
+# Retained Mir for analysis
+write ("RETAINED GENES WITHOUT NA", report_name, append=T)
+slice = paste((names(sample_data[,colSums(is.na(sample_data)) == 0])), collapse = "\t")
+write (slice, report_name, append=T)
 
-    Dim = dimdesc(PCA.res, axes = c(1, 2))
-    
-    output = rbind (
-        c("Dim1.Correlation", "Dim1.p-Value"), Dim$Dim.1$quanti,
-        c("Dim2.Correlation", "Dim2.p-Value"), Dim$Dim.2$quanti)
-        
-    write.table(output, paste("ACP_correlated_variables_", group,".csv", collapse=""), sep="\t", col.names = FALSE)
-    
-    ## Row clustering
-    dist_mat = as.dist(1-cor(group.data, method="pearson"))
-    hr <- hclust(dist_mat, method="complete")
-    group.data = t(group.data)
-    
-    ## Plot heatmap
-    heatmap.2(
-        group.data,
-        Rowv=as.dendrogram(hr),
-        Colv= FALSE,
-        dendrogram = "row",
-        scale="row",
-        density.info="density",
-        trace = "column",
-        tracecol = "black",
-        col = colorRampPalette(c("springgreen4","palegreen1","white","coral1","red4")),
-        main = group,
-        cexCol = 0.7,
-        cexRow = 0.5)
-        
-    dev.print(file = paste("Heatmap_", group,".svg", collapse=""), device=svg)
-}
+# replace NA by 0
+sample_data[is.na(sample_data)] = 0
 
-# Write the list of eliminated or retained genes in files
-lapply(eliminated_genes, write, "Eliminated_genes.txt", append=TRUE)
-lapply(retained_genes, write, "Retained_genes.txt", append=TRUE)
+# Scale and center data
+sample_data = scale(sample_data)
+#print (sample_data)
+
+### PCA ###
+
+# Perform PCA with FactoMineR pakage
+PCA.res = PCA (sample_data, graph = FALSE)
+
+# Create and export plots for all ACP results
+cos2_PC1_PC2 = rowSums (PCA.res$ind$cos2[,c("Dim.1","Dim.2") ], dims = 1)
+plot(PCA.res, axes = c(1, 2), choix = "ind", title = sample_name, cex = cos2_PC1_PC2/2+0.6)
+dev.print(file = paste(sample_name, "_PCA_samples_PC1_PC2.svg", collapse=""), device=svg)
+
+cos2_PC1_PC3 = rowSums (PCA.res$ind$cos2[,c("Dim.1","Dim.3") ], dims = 1)
+plot(PCA.res, axes = c(1, 3), choix = "ind", title = sample_name, cex = cos2_PC1_PC3/2+0.6)
+dev.print(file = paste(sample_name, "_PCA_samples_PC1_PC3.svg", collapse=""), device=svg)
+
+plot(PCA.res, axes = c(1, 2), choix = "var", title = sample_name, cex = 0.5, lim.cos2.var = 0.6)
+dev.print(file = paste(sample_name, "_PCA_variables_PC1_PC2.svg", collapse=""), device=svg)
+
+plot(PCA.res, axes = c(1, 3), choix = "var", title = sample_name, cex = 0.5, lim.cos2.var = 0.6)
+dev.print(file = paste(sample_name, "_PCA_variables_PC1_PC3.svg", collapse=""), device=svg)
+
+# Plot the variance explained
+eigen_plot = barplot(PCA.res$eig[,2], names=paste("Dim",1:nrow(PCA.res$eig)), main = sample_name)
+dev.print(file = paste(sample_name, "_PCA_variance.svg", collapse=""), device=svg)
+
+# Create summary of highly correlated variables with dim1, dim2, dim3 and export to CSV files
+Dim = dimdesc(PCA.res, axes = c(1, 2, 3))
+output = rbind (
+    c("Dim1.Correlation", "Dim1.p-Value"), Dim$Dim.1$quanti,
+    c("Dim2.Correlation", "Dim2.p-Value"), Dim$Dim.2$quanti,
+    c("Dim3.Correlation", "Dim3.p-Value"), Dim$Dim.3$quanti)
+write.table(output, paste(sample_name, "_PCA_var_dim.csv", collapse=""), sep="\t", col.names = FALSE)
+
+### HEATMAP ###
+
+## Row clustering
+dist_mat = as.dist(1-cor(sample_data, method="pearson"))
+hr <- hclust(dist_mat, method="complete")
+sample_data = t(sample_data)
+
+heatmap.2(
+    sample_data,
+    Rowv=as.dendrogram(hr),
+    Colv= FALSE,
+    dendrogram = "row",
+    scale="row",
+    density.info="density",
+    trace = "column",
+    tracecol = "black",
+    col = colorRampPalette(c("springgreen4","palegreen1","white","coral1","red4")),
+    main = sample_name,
+    cexCol = 0.7,
+    cexRow = 0.5)
+
+dev.print(file = paste(sample_name, "_Heatmap.svg", collapse=""), device=svg)
 
 warnings()
