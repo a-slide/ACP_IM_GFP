@@ -6,9 +6,10 @@ args <- commandArgs(trailingOnly = TRUE)
 
 if (length (args) != 2)
     stop("2 arguments are required:
-    Filename of csv file containing the data
-    Max percentage of values with NA allows per column
-    Example : ACP_IM_GFP.R ./data/Sample.csv 50")
+    USAGE: TaqMDA.R  <Sample_sheet.csv>  <max_percent_of_na_authorized>
+        * Filename of csv file containing the data
+        * Max percentage of values with NA allows per column
+    EXAMPLE : TaqMDA.R ./data/Sample.csv 50")
 
 ### LOAD PACKAGES ###
 
