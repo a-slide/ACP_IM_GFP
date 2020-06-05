@@ -6,7 +6,7 @@
 
 **Creation : 2015/08/28**
 
-**Last update : 2015/08/28**
+**Last update : 2020/06/05**
 
 ---
 
@@ -91,7 +91,8 @@ The program was developed under Linux Mint 16 "petra" but is compatible with oth
 
 ## Authors and Contact
 
-Adrien Leger - 2015
-* <adrien.leger@gmail.com>  <adrien.leger@inserm.fr>  <adrien.leger@univ-nantes.fr>
+Adrien Leger - 2020
+* Adrien Leger - <aleg {at} ebi.ac.uk>
 * [Github](https://github.com/a-slide)
-* [Atlantic Gene Therapies - INSERM 1089](http://www.atlantic-gene-therapies.fr/)
+
+[Translational gene therapy for genetic diseases - UMR 1089](https://umr1089.univ-nantes.fr/)
