@@ -14,7 +14,7 @@
 
 TaqMDA is an R script developed to analyze large scale data obtained by RT-QPCR arrays. It generates a principal component analysis for the first 3 dimensions and a heatmap.
 
-Developed for the study: *...*
+Developed for the project LR-GFP-NHP
 
 ## Principle
 
