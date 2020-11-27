@@ -93,7 +93,7 @@ The program was developed under Linux Mint 16 "petra" but is compatible with oth
 
 * [Biceps Femoris Data](https://raw.githubusercontent.com/a-slide/TaqMDA/master/Paper_Data/Gernoux_RawDatas_84_genes_BicepsFemoris.csv)
 * [Tibialis Data](https://raw.githubusercontent.com/a-slide/TaqMDA/master/Paper_Data/Gernoux_RawDatas_84_genes_Tibialis.csv)
-* [All results](https://raw.githubusercontent.com/a-slide/TaqMDA/master/Paper_Results/Whole analysis of inflammation in muscle.pdf)
+* [All results](https://raw.githubusercontent.com/a-slide/TaqMDA/master/Paper_Results/Whole%20analysis%20of%20inflammation%20in%20muscle.pdf)
 
 ## Authors and Contact
 
